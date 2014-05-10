@@ -17271,15 +17271,20 @@ Reaction.Router = {
   #   'contact': 'ContactComponent'
   # }
   _routes: {}
+  _target: null
   getCurrentPath: ->
     window.location.pathname.slice(1)
-  linkTo: (routeName) ->
+  initialize: (routes, target) ->
+    @_target = target
+    @route(routes)
+    @start()
+  linkTo: (routeName) ->  # Programatically trigger link
     @renderRoute(routeName, true)
   renderComponent: (componentName, params) ->
     params = if (typeof params == 'undefined') then {} else params
     component = callFunctionByName(componentName, Reaction, params)
     # TODO: If component is undefined, render generic error
-    React.renderComponent(component, document.getElementById('root'))
+    React.renderComponent(component, @_target || document.getElementById('root'))
   renderError: (errorCode) ->
     componentName = 'Error' + errorCode  # Error components should be named Error404, Error403, etc
     @renderComponent(componentName)
@@ -17331,8 +17336,6 @@ Reaction.Router = {
     # Handle popstate 
     window.onpopstate = (event) ->
       return if (typeof event.state == 'undefined') or (event.state == null) or (typeof event.state.currPath == 'undefined') # No last state (maybe on page load, fired by Webkit)
-      console.log('Onpopstate state: ' + JSON.stringify(event.state))
-      console.log('Onpopstate currPath: ' + JSON.stringify(event.state.currPath))
       lastPath = event.state.currPath  # event.state will be state from target page, not current page
       if typeof lastPath == 'undefined'  # No previous path
         _this.renderRoute('/', false)  # Probably should render root rather than 404, right?  # Don't push old state again
