@@ -64,6 +64,7 @@ Reaction.Router = {
     # reaction should be included at bottom of page
     links = document.getElementsByTagName('a')
     anchor.addEventListener('click', (event) ->
+      event.prenventDefault()
       href = event.target.getAttribute('href')
       _this.renderRoute(href) if href.length > 0
     ) for anchor in links
