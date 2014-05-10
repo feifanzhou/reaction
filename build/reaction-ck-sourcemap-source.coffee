@@ -17273,6 +17273,8 @@ Reaction.Router = {
   _routes: {}
   getCurrentPath: ->
     window.location.pathname.slice(1)
+  linkTo: (routeName) ->
+    @renderRoute(routeName, true)
   renderComponent: (componentName, params) ->
     params = if (typeof params == 'undefined') then {} else params
     component = callFunctionByName(componentName, Reaction, params)
@@ -17284,8 +17286,11 @@ Reaction.Router = {
   renderRoute: (routeName, shouldPush) ->
     shouldPush = if (typeof shouldPush == 'undefined') then true else shouldPush  # Push by default
     state = { currPath: @getCurrentPath() }
-    window.history.pushState(state, '', routeName) if shouldPush
-    componentName = if (routeName.length == 0 or routeName == '/') then @_routes['_root'] else @routes[pathname]
+    if shouldPush
+      window.history.pushState(state, '', routeName)
+    else
+      window.history.replaceState(state, '', routeName)  # Going to a new route — still need to change the location!
+    componentName = if (routeName.length == 0 or routeName == '/') then @_routes['_root'] else @_routes[routeName]
     if typeof componentName == 'undefined'  # No direct match
       # Try to find matching pattern
       param_map = {} # Map from param name to corresponding parameter in routeComponents
@@ -17310,16 +17315,29 @@ Reaction.Router = {
   start: ->
     pathName = @getCurrentPath()
     @renderRoute(pathName)
+    _this = this
     
+    # Hijack all links
+    # Hijacking: https://gist.github.com/tbranyen/1142129
+    # Adding event listener: http://wordpressapi.com/add-event-image-elements-javascript/
+    # Because it's getting all anchor elements on page
+    # reaction should be included at bottom of page
+    links = document.getElementsByTagName('a')
+    anchor.addEventListener('click', (event) ->
+      href = event.target.getAttribute('href')
+      _this.renderRoute(href) if href.length > 0
+    ) for anchor in links
+
+    # Handle popstate 
     window.onpopstate = (event) ->
-      return if (typeof event.state == 'undefined') or (typeof event.state.currPath == 'undefined') # No last state (maybe on page load, fired by Webkit)
+      return if (typeof event.state == 'undefined') or (event.state == null) or (typeof event.state.currPath == 'undefined') # No last state (maybe on page load, fired by Webkit)
       console.log('Onpopstate state: ' + JSON.stringify(event.state))
       console.log('Onpopstate currPath: ' + JSON.stringify(event.state.currPath))
       lastPath = event.state.currPath  # event.state will be state from target page, not current page
       if typeof lastPath == 'undefined'  # No previous path
-        @renderRoute('/', false)  # Probably should render root rather than 404, right?  # Don't push old state again
+        _this.renderRoute('/', false)  # Probably should render root rather than 404, right?  # Don't push old state again
         return
-      currPath = @getCurrentPath()
+      currPath = _this.getCurrentPath()
       return if lastPath == currPath  # Same path
-      @renderRoute(lastPath)
+      _this.renderRoute(lastPath, false)
 }
