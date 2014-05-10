@@ -17300,12 +17300,13 @@ Reaction.Router = {
     routeName = '/' + routeName if routeName.charAt(0) != '/' # routeName is URL relative to root
     console.log('Render route: ' + routeName)
     shouldPush = if (typeof shouldPush == 'undefined') then true else shouldPush  # Push by default
-    state = { currPath: @getCurrentPath() }
+    state = { currPath: routeName }
     targetURL = if (routeName.length == 0) or (routeName == null) then '/' else routeName
-    # if shouldPush
-    #   window.history.pushState(state, '', targetURL)
-    # else
-      # window.history.replaceState(state, '', targetURL)  # Going to a new route — still need to change the location!
+    if shouldPush
+      window.history.pushState(state, '', targetURL)
+    else
+      window.history.replaceState(state, '', targetURL)  # Going to a new route — still need to change the location!
+    console.log('Updated history: ' + JSON.stringify(window.history))
     componentName = if (routeName.length == 0 or routeName == '/') then @_routes['_root'] else @_routes[routeName]
     if typeof componentName == 'undefined'  # No direct match
       # Try to find matching pattern
@@ -17338,20 +17339,19 @@ Reaction.Router = {
     @_routes = routes
   start: ->
     pathName = @getCurrentPath()
-    @renderRoute(pathName)
+    @renderRoute(pathName, false)
     _this = this
     
     # Hijack all links
     # Hijacking: https://gist.github.com/tbranyen/1142129
     # Adding event listener: http://wordpressapi.com/add-event-image-elements-javascript/
-    # Because it's getting all anchor elements on page
-    # reaction should be included at bottom of page
-    links = document.getElementsByTagName('a')
-    anchor.addEventListener('click', (event) ->
-      href = event.target.getAttribute('href')
-      _this.renderRoute(href) if href.length > 0
-      event.preventDefault()
-    ) for anchor in links
+    # Event delegation: http://davidwalsh.name/event-delegate
+    window.addEventListener('click', (event) ->
+      if event.target && event.target.hasAttribute('href')
+        href = event.target.getAttribute('href')
+        _this.renderRoute(href) if href.length > 0
+        event.preventDefault()
+    )
 
     # Handle popstate 
     window.onpopstate = (event) ->
