@@ -25,17 +25,18 @@ Reaction.Router = {
   renderError: (errorCode, intendedRoute) ->
     componentName = 'Error' + errorCode  # Error components should be named Error404, Error403, etc
     state = { currPath: @getCurrentPath() }
-    window.history.pushState(state, 'Error ' + errorCode, intendedRoute)
+    # window.history.pushState(state, 'Error ' + errorCode, intendedRoute)
     @renderComponent(componentName)
   renderRoute: (routeName, shouldPush) ->
+    routeName = '/' + routeName if routeName.charAt(0) != '/' # routeName is URL relative to root
     console.log('Render route: ' + routeName)
     shouldPush = if (typeof shouldPush == 'undefined') then true else shouldPush  # Push by default
     state = { currPath: @getCurrentPath() }
     targetURL = if (routeName.length == 0) or (routeName == null) then '/' else routeName
-    if shouldPush
-      window.history.pushState(state, '', targetURL)
-    else
-      window.history.replaceState(state, '', targetURL)  # Going to a new route — still need to change the location!
+    # if shouldPush
+    #   window.history.pushState(state, '', targetURL)
+    # else
+      # window.history.replaceState(state, '', targetURL)  # Going to a new route — still need to change the location!
     componentName = if (routeName.length == 0 or routeName == '/') then @_routes['_root'] else @_routes[routeName]
     if typeof componentName == 'undefined'  # No direct match
       # Try to find matching pattern
@@ -44,13 +45,16 @@ Reaction.Router = {
         if @_routes.hasOwnProperty(key)
           components = key.split('/')
           routeComponents = routeName.split('/')
-          routeComponents.splice(0, 1)  # First component always appears blank
           if components.length == routeComponents.length  # Number of fixed or parameter components match up
+            console.log('Length matches')
             for index, comp of components  # index,comp order defined by Coffeescript apparently
               if comp.charAt(0) == ':'  # Is a parameter
+                console.log('Is param')
                 param_map[comp.substring(1)] = routeComponents[index] # Get name of param, assign it value from URL
               else # Must be direct match
                 if comp != routeComponents[index] # Not direct match
+                  console.log('Comp: ' + comp)
+                  console.log('Route component: ' + routeComponents[index])
                   @renderError(404, routeName)
                   return
           else
@@ -58,6 +62,8 @@ Reaction.Router = {
         # Survived to here — found match
         componentName = @_routes[key]
         `break`
+    console.log('Component name: ' + componentName)
+    console.log('Param map: ' + JSON.stringify(param_map))
     @renderComponent(componentName, param_map)
   route: (routes) ->
     @_routes = routes
