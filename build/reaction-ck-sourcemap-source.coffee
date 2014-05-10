@@ -17252,11 +17252,15 @@ window.Reaction or= {}
 ###
 # http://stackoverflow.com/a/359910/472768
 callFunctionByName = (funcName, ctxt) ->
-  args = [].splice.call(arguments).splice(2)
+  # args = [].splice.call(arguments).splice(2)
+  args = arguments[2]
   namespaces = funcName.split('.')
   func = namespaces.pop()
   ctxt = ctxt[namespaces[i]] for i in namespaces
-  return ctxt[func].apply(this, args)
+  if typeof ctxt[func] == 'undefined' or ctxt[func] == null
+    return
+  else
+    return ctxt[func].apply(this, args)
 
 ###
 --------------------------------------------
@@ -17283,18 +17287,24 @@ Reaction.Router = {
   renderComponent: (componentName, params) ->
     params = if (typeof params == 'undefined') then {} else params
     component = callFunctionByName(componentName, Reaction, params)
+    if componentName == 'IDComponent'
+      component = Reaction.IDComponent(params)
     # TODO: If component is undefined, render generic error
     React.renderComponent(component, @_target || document.getElementById('root'))
-  renderError: (errorCode) ->
+  renderError: (errorCode, intendedRoute) ->
     componentName = 'Error' + errorCode  # Error components should be named Error404, Error403, etc
+    state = { currPath: @getCurrentPath() }
+    window.history.pushState(state, 'Error ' + errorCode, intendedRoute)
     @renderComponent(componentName)
   renderRoute: (routeName, shouldPush) ->
+    console.log('Render route: ' + routeName)
     shouldPush = if (typeof shouldPush == 'undefined') then true else shouldPush  # Push by default
     state = { currPath: @getCurrentPath() }
+    targetURL = if (routeName.length == 0) or (routeName == null) then '/' else routeName
     if shouldPush
-      window.history.pushState(state, '', routeName)
+      window.history.pushState(state, '', targetURL)
     else
-      window.history.replaceState(state, '', routeName)  # Going to a new route — still need to change the location!
+      window.history.replaceState(state, '', targetURL)  # Going to a new route — still need to change the location!
     componentName = if (routeName.length == 0 or routeName == '/') then @_routes['_root'] else @_routes[routeName]
     if typeof componentName == 'undefined'  # No direct match
       # Try to find matching pattern
@@ -17303,17 +17313,20 @@ Reaction.Router = {
         if @_routes.hasOwnProperty(key)
           components = key.split('/')
           routeComponents = routeName.split('/')
-          if components.length != routeComponents.length
-            @renderError(404)
-            return
-          for comp, index of components
-            if comp.charAt(0) == ':'
-              # comp[index] = /\w/i   # Replace with component position with regex
-              param_map[comp.substring(1)] = routeComponents[index] # Get name of param, assign it value from URL
-            else # Must be direct match
-              if comp != routeComponents[index] # Not direct match
-                @renderError(404)
-                return
+          routeComponents.splice(0, 1)  # First component always appears blank
+          if components.length == routeComponents.length  # Number of fixed or parameter components match up
+            for index, comp of components  # index,comp order defined by Coffeescript apparently
+              if comp.charAt(0) == ':'  # Is a parameter
+                param_map[comp.substring(1)] = routeComponents[index] # Get name of param, assign it value from URL
+              else # Must be direct match
+                if comp != routeComponents[index] # Not direct match
+                  @renderError(404, routeName)
+                  return
+          else
+            `continue`
+        # Survived to here — found match
+        componentName = @_routes[key]
+        `break`
     @renderComponent(componentName, param_map)
   route: (routes) ->
     @_routes = routes
@@ -17329,9 +17342,9 @@ Reaction.Router = {
     # reaction should be included at bottom of page
     links = document.getElementsByTagName('a')
     anchor.addEventListener('click', (event) ->
-      event.prenventDefault()
       href = event.target.getAttribute('href')
       _this.renderRoute(href) if href.length > 0
+      event.preventDefault()
     ) for anchor in links
 
     # Handle popstate 
