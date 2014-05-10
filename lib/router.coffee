@@ -16,9 +16,10 @@ Reaction.Router = {
   renderError: (errorCode) ->
     componentName = 'Error' + errorCode  # Error components should be named Error404, Error403, etc
     renderComponent(componentName)
-  renderRoute: (routeName) ->
-    state = { lastPath: getCurrentPath() } # The last page of the next page is the current page
-    window.history.pushState(state, '', routeName)
+  renderRoute: (routeName, shouldPush) ->
+    shouldPush = if (typeof shouldPush == 'undefined') then true else shouldPush  # Push by default
+    state = { currPath: getCurrentPath() }
+    window.history.pushState(state, '', routeName) if shouldPush
     componentName = if (routeName.length == 0 or routeName == '/') then _t._routes._root else _t.routes[pathname]
     if typeof componentName == 'undefined'  # No route defined
       renderError(404)
@@ -40,9 +41,9 @@ Reaction.Router = {
     # )
     
     window.onpopstate = (event) ->
-      lastPath = event.state.lastPath
+      lastPath = event.state.currPath  # event.state will be state from target page, not current page
       if typeof lastPath == 'undefined'  # No previous path
-        renderRoute('/')  # Probably should render root rather than 404, right?
+        renderRoute('/', false)  # Probably should render root rather than 404, right?  # Don't push old state again
         return
       currPath = getCurrentPath()
       if lastPath == currPath  # Same path
