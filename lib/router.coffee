@@ -9,8 +9,9 @@ Reaction.Router = {
   _t: this
   getCurrentPath: ->
     window.location.pathname.slice(1)
-  renderComponent: (componentName) ->
-    component = callFunctionByName(componentName, Reaction)
+  renderComponent: (componentName, params) ->
+    params = if (typeof params == 'undefined') then {} else params
+    component = callFunctionByName(componentName, Reaction, params)
     # TODO: If component is undefined, render generic error
     React.renderComponent(component, document.getElementById('root'))
   renderError: (errorCode) ->
@@ -21,10 +22,25 @@ Reaction.Router = {
     state = { currPath: getCurrentPath() }
     window.history.pushState(state, '', routeName) if shouldPush
     componentName = if (routeName.length == 0 or routeName == '/') then _t._routes._root else _t.routes[pathname]
-    if typeof componentName == 'undefined'  # No route defined
-      renderError(404)
-      return
-    renderComponent(componentName)
+    if typeof componentName == 'undefined'  # No direct match
+      # Try to find matching pattern
+      param_map = {} # Map from param name to corresponding parameter in routeComponents
+      for key of _t._routes
+        if _t._routes.hasOwnProperty(key)
+          components = key.split('/')
+          routeComponents = routeName.split('/')
+          if components.length != routeComponents.length
+            renderError(404)
+            return
+          for comp, index of components
+            if comp.charAt(0) == ':'
+              # comp[index] = /\w/i   # Replace with component position with regex
+              param_map[comp.substring(1)] = routeComponents[index] # Get name of param, assign it value from URL
+            else # Must be direct match
+              if comp != routeComponents[index] # Not direct match
+                renderError(404)
+                return
+    renderComponent(componentName, param_map)
   route: (routes) ->
     _t._routes = routes
   start: ->
