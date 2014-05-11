@@ -17251,6 +17251,7 @@ window.Reaction or= {}
 --------------------------------------------
 ###
 # http://stackoverflow.com/a/359910/472768
+# TODO: Trigger error (404, 500, whatever) if this function throws an error
 callFunctionByName = (funcName, ctxt) ->
   # args = [].splice.call(arguments).splice(2)
   args = arguments[2]
@@ -17298,7 +17299,6 @@ Reaction.Router = {
     @renderComponent(componentName)
   renderRoute: (routeName, shouldPush) ->
     routeName = '/' + routeName if routeName.charAt(0) != '/' # routeName is URL relative to root
-    console.log('Render route: ' + routeName)
     shouldPush = if (typeof shouldPush == 'undefined') then true else shouldPush  # Push by default
     state = { currPath: routeName }
     targetURL = if (routeName.length == 0) or (routeName == null) then '/' else routeName
@@ -17306,7 +17306,6 @@ Reaction.Router = {
       window.history.pushState(state, '', targetURL)
     else
       window.history.replaceState(state, '', targetURL)  # Going to a new route — still need to change the location!
-    console.log('Updated history: ' + JSON.stringify(window.history))
     componentName = if (routeName.length == 0 or routeName == '/') then @_routes['_root'] else @_routes[routeName]
     if typeof componentName == 'undefined'  # No direct match
       # Try to find matching pattern
@@ -17316,15 +17315,11 @@ Reaction.Router = {
           components = key.split('/')
           routeComponents = routeName.split('/')
           if components.length == routeComponents.length  # Number of fixed or parameter components match up
-            console.log('Length matches')
             for index, comp of components  # index,comp order defined by Coffeescript apparently
               if comp.charAt(0) == ':'  # Is a parameter
-                console.log('Is param')
                 param_map[comp.substring(1)] = routeComponents[index] # Get name of param, assign it value from URL
               else # Must be direct match
                 if comp != routeComponents[index] # Not direct match
-                  console.log('Comp: ' + comp)
-                  console.log('Route component: ' + routeComponents[index])
                   @renderError(404, routeName)
                   return
           else
@@ -17332,8 +17327,6 @@ Reaction.Router = {
         # Survived to here — found match
         componentName = @_routes[key]
         `break`
-    console.log('Component name: ' + componentName)
-    console.log('Param map: ' + JSON.stringify(param_map))
     @renderComponent(componentName, param_map)
   route: (routes) ->
     @_routes = routes
