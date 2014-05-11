@@ -17291,7 +17291,8 @@ Reaction.Router = {
     if componentName == 'IDComponent'
       component = Reaction.IDComponent(params)
     # TODO: If component is undefined, render generic error
-    React.renderComponent(component, @_target || document.getElementById('root'))
+    @_target or= document.getElementById('root')
+    React.renderComponent(component, @_target)
   renderError: (errorCode, intendedRoute) ->
     componentName = 'Error' + errorCode  # Error components should be named Error404, Error403, etc
     state = { currPath: @getCurrentPath() }
