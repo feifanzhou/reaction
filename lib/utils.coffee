@@ -10,3 +10,6 @@ callFunctionByName = (funcName, ctxt) ->
     return
   else
     return ctxt[func].apply(this, args)
+
+hasLocalStorage = ->
+  return typeof(Storage) != `void(0)` || typeof(Storage) != 'undefined'
