@@ -28,7 +28,7 @@ callFunctionByName = (funcName, ctxt) ->
   if typeof ctxt[func] == 'undefined' or ctxt[func] == null
     return
   else
-    return ctxt[func].apply(this, args)
+    return ctxt[func].apply(this, [args])
 
 hasLocalStorage = ->
   return typeof(Storage) != `void(0)` || typeof(Storage) != 'undefined'
