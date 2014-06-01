@@ -7,7 +7,7 @@ callFunctionByName = (funcName, ctxt) ->
   func = namespaces.pop()
   ctxt = ctxt[namespaces[i]] for i in namespaces
   if typeof ctxt[func] == 'undefined' or ctxt[func] == null
-    return
+    return null
   else
     return ctxt[func].apply(this, [args])
 

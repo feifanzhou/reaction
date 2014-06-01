@@ -26,7 +26,7 @@ callFunctionByName = (funcName, ctxt) ->
   func = namespaces.pop()
   ctxt = ctxt[namespaces[i]] for i in namespaces
   if typeof ctxt[func] == 'undefined' or ctxt[func] == null
-    return
+    return null
   else
     return ctxt[func].apply(this, [args])
 
@@ -58,8 +58,6 @@ Reaction.Router = {
   renderComponent: (componentName, params) ->
     params = if (typeof params == 'undefined') then {} else params
     component = callFunctionByName(componentName, Reaction, params)
-    if componentName == 'IDComponent'
-      component = Reaction.IDComponent(params)
     # TODO: If component is undefined, render generic error
     @_target or= document.getElementById('root')
     React.renderComponent(component, @_target)
@@ -82,23 +80,26 @@ Reaction.Router = {
       # Try to find matching pattern
       param_map = {} # Map from param name to corresponding parameter in routeComponents
       for key of @_routes
-        if @_routes.hasOwnProperty(key)
-          components = key.split('/')
-          routeComponents = routeName.split('/')
-          if components.length == routeComponents.length  # Number of fixed or parameter components match up
-            for index, comp of components  # index,comp order defined by Coffeescript apparently
-              if comp.charAt(0) == ':'  # Is a parameter
-                param_map[comp.substring(1)] = routeComponents[index] # Get name of param, assign it value from URL
-              else # Must be direct match
-                if comp != routeComponents[index] # Not direct match
-                  @renderError(404, routeName)
-                  return
-          else
-            `continue`
-        # Survived to here — found match
+        continue if !@_routes.hasOwnProperty(key)
+        components = key.split('/')
+        routeComponents = routeName.split('/')
+        match = true
+        continue if components.length != routeComponents.length  # Number of fixed or parameter components don't match up
+        for index, comp of components  # index,comp order defined by Coffeescript apparently
+          if comp.charAt(0) == ':'  # Is a parameter
+            param_map[comp.substring(1)] = routeComponents[index] # Get name of param, assign it value from URL
+          else # Needs to be direct match
+            if comp != routeComponents[index] # Not direct match
+              match = false
+              continue
+        continue if !match  # Try to match with next route
+        # Only update componentName if all components match up
         componentName = @_routes[key]
-        `break`
-    @renderComponent(componentName, param_map)
+        break
+    if typeof componentName == 'undefined' # Still — no match found
+      @renderError(404, routeName)
+    else
+      @renderComponent(componentName, param_map)
   route: (routes) ->
     @_routes = routes
   start: ->
